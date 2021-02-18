@@ -1,12 +1,33 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
 namespace DocsRepoCloudIntegration
 {
-    class FileSystemDriver : IStorageDriver
+    class FileSystemDriver : StorageBase, IStorageDriver
     {
+        private readonly ILogger<OneDriveStorageDriver> _logger;
+
+        public FileSystemDriver(ILogger<OneDriveStorageDriver> logger, IOptionsMonitor<StorageOptions> options)
+            : base(options)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
+        public FileSystemDriver(StorageOptions options)
+            : base(options)
+        {
+
+        }
+
+        public FileSystemDriver()
+        {
+
+        }
+
         public Task CopyFile(string source, string target, bool ovewrite = true)
         {
             if (File.Exists(source))
@@ -31,57 +52,12 @@ namespace DocsRepoCloudIntegration
             return Task.CompletedTask;
         }
 
-        public ValueTask<bool> DeleteFileInFolder(string path, string name)
-        {
-            //Buscar el archivo fisico para eliminarlo.
-
-            try
-            {
-                var files = Directory.GetFiles(path, name);
-
-                foreach (string file in files)
-                {
-                    File.Delete(file);
-                }
-
-                return ValueTask.FromResult(true);
-            }
-            catch (Exception)
-            {
-                return ValueTask.FromResult(false);
-            }
-        }
-
-        public Task DeleteFilesInFolder(string path)
-        {
-            if (Directory.Exists(path))
-            {
-                var infoDir = new DirectoryInfo(path);
-                foreach (var file in infoDir.GetFiles())
-                {
-                    file.Delete();
-                }
-            }
-            return Task.CompletedTask;
-        }
-
-        public Task DeleteFolder(string path)
-        {
-            if (Directory.Exists(path))
-                Directory.Delete(path);
-
-            return Task.CompletedTask;
-        }
-
         public Task DeleteFolder(string path, bool recursive = true)
         {
-            throw new NotImplementedException();
-        }
+            if (Directory.Exists(path))
+                Directory.Delete(path, recursive);
 
-        public ValueTask<bool> FileExists(string filePath)
-        {
-            var result = File.Exists(filePath);
-            return ValueTask.FromResult(result);
+            return Task.CompletedTask;
         }
 
         public string GenerateFilePath(string path, string fileName, bool useUniqueString = false)
@@ -109,21 +85,20 @@ namespace DocsRepoCloudIntegration
 
         public async Task<MemoryStream> GetMemoryStreamFromFile(string fullPath)
         {
-            //COMPLETED: Crear metodo en StorageHelper para Leer archivos 
-            MemoryStream msResult;//lo cambio a MemoryStream porque a FileStream se debe cerrar y se le debe hacer Dispose, en cambio MemoryStream es un Objeto totalmente administrado y sera desechado por GC
+            MemoryStream msResult;
             if (File.Exists(fullPath))
             {
-                using (var file = File.OpenRead(fullPath))//nos aseguramos de hacer dispose del recurso que lee el archivo
+                using (var file = File.OpenRead(fullPath))
                 {
                     msResult = new MemoryStream();
                     await file.CopyToAsync(msResult).ConfigureAwait(false);
-                    file.Close();//cerramos el archivo
+                    file.Close();
                 }
             }
             else
                 throw new FileNotFoundException("El Archivo no existe", fullPath);
 
-            return Task.FromResult(msResult);
+            return msResult;
 
         }
 
@@ -141,6 +116,8 @@ namespace DocsRepoCloudIntegration
                     var fileName = Path.GetFileName(sourceFileName);
 
                     File.Move(sourceFileName, $"{pathDest}{fileName}");
+
+                    return Task.CompletedTask;
                 }
                 catch (Exception e)
                 {
@@ -155,38 +132,42 @@ namespace DocsRepoCloudIntegration
 
         public string Save(byte[] fileContent, string path, string fileName, bool useUniqueString)
         {
-            throw new NotImplementedException();
+            string filePath = GenerateFilePath(path, fileName, useUniqueString);
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                stream.Write(fileContent, 0, fileContent.Length);
+            }
+            return filePath;
         }
 
         public string Save(Stream fileStream, string path, string fileName, bool useUniqueString)
         {
-            throw new NotImplementedException();
+            string filePath = GenerateFilePath(path, fileName, useUniqueString);
+
+            CreatFolderIfNotExists(path);
+
+            using (var stream = File.Create(filePath))
+            {
+                fileStream.CopyTo(stream);
+            }
+            return filePath;
         }
 
-        public string Save(string path, string fileName, bool useUniqueString, out string savedFileName)
+        public async Task<string> SaveAsync(Stream fileStream, string path, string fileName, bool useUniqueString)
         {
-            throw new NotImplementedException();
-        }
+            string filePath = GenerateFilePath(path, fileName, useUniqueString);
+            await CreatFolderIfNotExists(path);
 
-        public Task<string> SaveAsync(Stream fileStream, string path, string fileName, bool useUniqueString)
-        {
-            throw new NotImplementedException();
+            using (var stream = File.Create(filePath))
+            {
+                await fileStream.CopyToAsync(stream).ConfigureAwait(false);
+            }
+            return filePath;
         }
 
         public string SaveOnTempFolder(byte[] fileContent, string fileName, bool useUniqueString)
         {
-            throw new NotImplementedException();
-        }
-
-        public string SaveOnTempFolder(Stream fileContent, string fileName, bool useUniqueString)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<string> SaveOnTempFolderAsync(Stream fileContent, string fileName, bool useUniqueString)
-        {
-            throw new NotImplementedException();
+            return Save(fileContent, TempFolder, fileName, useUniqueString);
         }
     }
-
 }

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace DocsRepoCloudIntegration
 {
-    class OneDriveStorageDriver : CloudStorageBase, IStorageDriver
+    class OneDriveStorageDriver : StorageBase, IStorageDriver
     {
         private readonly ILogger<OneDriveStorageDriver> _logger;
         private readonly IOptionsMonitor<StorageOptions> _options;
@@ -38,11 +38,9 @@ namespace DocsRepoCloudIntegration
             return result.Id;
         }
 
-       
-
         public async Task CreatFolderIfNotExists(string folderPath)
         {
-            var foldersToCreate
+            var foldersToCreate = GetWorkingDriveId();
             DriveItem driveItem = new DriveItem() { };
             var result = await _graphServiceClient.Users["{5bf33692-4f7d-4139-b592-c058661d91f6}"].Drive.Items.Request().AddAsync();
         }
@@ -63,27 +61,7 @@ namespace DocsRepoCloudIntegration
             throw new NotImplementedException();
         }
 
-        public ValueTask<bool> DeleteFileInFolder(string path, string name)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task DeleteFilesInFolder(string path)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task DeleteFolder(string path)
-        {
-            throw new NotImplementedException();
-        }
-
         public Task DeleteFolder(string path, bool recursive = true)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ValueTask<bool> FileExists(string filePath)
         {
             throw new NotImplementedException();
         }
@@ -124,16 +102,6 @@ namespace DocsRepoCloudIntegration
         }
 
         public string SaveOnTempFolder(byte[] fileContent, string fileName, bool useUniqueString)
-        {
-            throw new NotImplementedException();
-        }
-
-        public string SaveOnTempFolder(Stream fileContent, string fileName, bool useUniqueString)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<string> SaveOnTempFolderAsync(Stream fileContent, string fileName, bool useUniqueString)
         {
             throw new NotImplementedException();
         }

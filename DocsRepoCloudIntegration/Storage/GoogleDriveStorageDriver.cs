@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace DocsRepoCloudIntegration
 {
-    class GoogleDriveStorageDriver : CloudStorageBase, IStorageDriver
+    class GoogleDriveStorageDriver : StorageBase, IStorageDriver
     {
         public Task CopyFile(string source, string target, bool ovewrite = true)
         {
@@ -22,27 +22,7 @@ namespace DocsRepoCloudIntegration
             throw new NotImplementedException();
         }
 
-        public ValueTask<bool> DeleteFileInFolder(string path, string name)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task DeleteFilesInFolder(string path)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task DeleteFolder(string path)
-        {
-            throw new NotImplementedException();
-        }
-
         public Task DeleteFolder(string path, bool recursive = true)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ValueTask<bool> FileExists(string filePath)
         {
             throw new NotImplementedException();
         }
@@ -82,27 +62,12 @@ namespace DocsRepoCloudIntegration
             throw new NotImplementedException();
         }
 
-        public string Save(string path, string fileName, bool useUniqueString, out string savedFileName)
-        {
-            throw new NotImplementedException();
-        }
-
         public Task<string> SaveAsync(Stream fileStream, string path, string fileName, bool useUniqueString)
         {
             throw new NotImplementedException();
         }
 
         public string SaveOnTempFolder(byte[] fileContent, string fileName, bool useUniqueString)
-        {
-            throw new NotImplementedException();
-        }
-
-        public string SaveOnTempFolder(Stream fileContent, string fileName, bool useUniqueString)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<string> SaveOnTempFolderAsync(Stream fileContent, string fileName, bool useUniqueString)
         {
             throw new NotImplementedException();
         }
