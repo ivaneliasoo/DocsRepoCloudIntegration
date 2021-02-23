@@ -57,18 +57,18 @@ namespace DocsRepoCloudIntegration
         {
             var driveId = await GetWorkingDriveId();
             var currentFolder = _graphServiceClient.Drives[driveId].Root;
-            var foldersToCreate = folderPath.Split("/", StringSplitOptions.RemoveEmptyEntries);
-            string path = $"{SystemBaseFolder}";
+            var foldersToCreate = $"{SystemBaseFolder}/{folderPath}".Split("/", StringSplitOptions.RemoveEmptyEntries);
+            string path = "";
             IDriveItemRequestBuilder builder = null;
             foreach (var folderName in foldersToCreate)
             {
                 path = string.Format("{0}{1}{2}", path, string.IsNullOrEmpty(path) ? "" : "/", folderName);
-                var driveRequest = currentFolder
+                builder = _graphServiceClient.Drives[driveId].Root
                     .ItemWithPath(path);
                 DriveItem existent;
                 try
                 {
-                    existent = await driveRequest.Request().GetAsync();
+                    existent = await builder.Request().GetAsync();
                 }
                 catch (Exception)
                 {
@@ -77,16 +77,24 @@ namespace DocsRepoCloudIntegration
 
                 if (existent is null)
                 {
-                    var folderCreator = await currentFolder.Children.Request().AddAsync(new DriveItem()
+                    try
                     {
-                        Name = folderName,
-                        Folder = new Folder(),
-                        AdditionalData = new Dictionary<string, object>()
-            {
-                {"@microsoft.graph.conflictBehavior", "rename"}
-            }
-                    });
-                    builder = currentFolder.ItemWithPath($"{SystemBaseFolder}/{path}");
+                        var folderCreator = await currentFolder.Children.Request().AddAsync(new DriveItem()
+                        {
+                            Name = folderName,
+                            Folder = new Folder(),
+                            AdditionalData = new Dictionary<string, object>()
+                                                {
+                                                    {"@microsoft.graph.conflictBehavior", "rename"}
+                                                }
+                        });
+                        builder = currentFolder.ItemWithPath(path);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error creando carpetas");
+                        throw;
+                    }
                 }
                 currentFolder = builder;
             }
