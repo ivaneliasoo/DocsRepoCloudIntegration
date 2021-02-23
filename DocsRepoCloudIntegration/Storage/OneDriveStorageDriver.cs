@@ -34,21 +34,69 @@ namespace DocsRepoCloudIntegration
 
         private async ValueTask<string> GetWorkingDriveId()
         {
-            var result = await _graphServiceClient.Users[$"{{{ _options.CurrentValue.CloudDriveUserId }}}"].Drive.Request().GetAsync();
+            var result = await _graphServiceClient
+                .Users[_options.CurrentValue.CloudDriveUserId]
+                .Drive
+                .Request()
+                .GetAsync();
+
             return result.Id;
+        }
+
+        private async ValueTask<IDriveItemRequestBuilder> GetRootFolder(string driveId)
+        {
+            var result = _graphServiceClient
+                .Drives[driveId]
+                .Root
+                .ItemWithPath(SystemBaseFolder);
+
+            return result;
         }
 
         public async Task CreatFolderIfNotExists(string folderPath)
         {
-            var foldersToCreate = GetWorkingDriveId();
-            DriveItem driveItem = new DriveItem() { };
-            var result = await _graphServiceClient.Users["{5bf33692-4f7d-4139-b592-c058661d91f6}"].Drive.Items.Request().AddAsync();
+            var driveId = await GetWorkingDriveId();
+            var currentFolder = _graphServiceClient.Drives[driveId].Root;
+            var foldersToCreate = folderPath.Split("/", StringSplitOptions.RemoveEmptyEntries);
+            string path = $"{SystemBaseFolder}";
+            IDriveItemRequestBuilder builder = null;
+            foreach (var folderName in foldersToCreate)
+            {
+                path = string.Format("{0}{1}{2}", path, string.IsNullOrEmpty(path) ? "" : "/", folderName);
+                var driveRequest = currentFolder
+                    .ItemWithPath(path);
+                DriveItem existent;
+                try
+                {
+                    existent = await driveRequest.Request().GetAsync();
+                }
+                catch (Exception)
+                {
+                    existent = null;
+                }
+
+                if (existent is null)
+                {
+                    var folderCreator = await currentFolder.Children.Request().AddAsync(new DriveItem()
+                    {
+                        Name = folderName,
+                        Folder = new Folder(),
+                        AdditionalData = new Dictionary<string, object>()
+            {
+                {"@microsoft.graph.conflictBehavior", "rename"}
+            }
+                    });
+                    builder = currentFolder.ItemWithPath($"{SystemBaseFolder}/{path}");
+                }
+                currentFolder = builder;
+            }
+
         }
 
         public async Task<IEnumerable<string>> ListAsync(string path = "")
         {
             var result = await _graphServiceClient.Users["{5bf33692-4f7d-4139-b592-c058661d91f6}"].Drive.Root.ItemWithPath($"{path}/Templates/DocumentosNuevaOferta").Children.Request().GetAsync();
-            return result.Select(di => $"{di.Name} - {di.FileSystemInfo.LastModifiedDateTime}" );
+            return result.Select(di => $"{di.Name} - {di.FileSystemInfo.LastModifiedDateTime}");
         }
 
         public Task CopyFile(string source, string target, bool ovewrite = true)

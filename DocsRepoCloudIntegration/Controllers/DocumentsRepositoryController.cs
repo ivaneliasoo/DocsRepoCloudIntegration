@@ -35,10 +35,10 @@ namespace DocsRepoCloudIntegration.Controllers
             return Ok(result);
         }
 
-        [HttpPost]
+        [HttpPost("oferta/{idOferta:int}")]
         public async Task<IActionResult> CreateOfertaFiles(int idOferta)
         {
-            string ofertaFolder = string.Format(_options.CurrentValue.PathTemplate, Entities.Ofertas.ToString(), idOferta.ToString());
+            string ofertaFolder = string.Format("{0}/{1}", Entities.Ofertas.ToString(), idOferta.ToString());
             try
             {
                 await _storageDriver.CreatFolderIfNotExists(ofertaFolder);
@@ -51,21 +51,21 @@ namespace DocsRepoCloudIntegration.Controllers
             }
         }
 
-        [HttpPost]
-        public async Task<IActionResult> CreatePedidosFiles(int idPedido)
-        {
-            string pedidoFolder = string.Format(_options.CurrentValue.PathTemplate, Entities.Pedidos.ToString(), idPedido.ToString());
-            try
-            {
-                await _storageDriver.CreatFolderIfNotExists(pedidoFolder);
-                return Ok();
-            }
-            catch (Exception exIO)
-            {
-                _logger.LogError(exIO, $"Error Creando Carpetas {pedidoFolder}");
-                throw;
-            }
-        }
+        //[HttpPost("oferta/{idPedido:int}")]
+        //public async Task<IActionResult> CreatePedidosFiles(int idPedido)
+        //{
+        //    string pedidoFolder = string.Format(_options.CurrentValue.PathTemplate, Entities.Pedidos.ToString(), idPedido.ToString());
+        //    try
+        //    {
+        //        await _storageDriver.CreatFolderIfNotExists(pedidoFolder);
+        //        return Ok();
+        //    }
+        //    catch (Exception exIO)
+        //    {
+        //        _logger.LogError(exIO, $"Error Creando Carpetas {pedidoFolder}");
+        //        throw;
+        //    }
+        //}
     }
 
     public enum Entities
