@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace DocsRepoCloudIntegration
 {
-    class OneDriveStorageDriver : StorageBase, IStorageDriver
+    public class OneDriveStorageDriver : StorageBase, IStorageDriver
     {
         private readonly ILogger<OneDriveStorageDriver> _logger;
         private readonly IOptionsMonitor<StorageOptions> _options;

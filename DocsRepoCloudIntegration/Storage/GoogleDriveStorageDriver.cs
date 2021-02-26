@@ -1,12 +1,18 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
 namespace DocsRepoCloudIntegration
 {
-    class GoogleDriveStorageDriver : StorageBase, IStorageDriver
+    public class GoogleDriveStorageDriver : StorageBase, IStorageDriver
     {
+        public GoogleDriveStorageDriver(ILogger<GoogleDriveStorageDriver> logger, IOptionsMonitor<StorageOptions> options)
+        {
+        }
+
         public Task CopyFile(string source, string target, bool ovewrite = true)
         {
             throw new NotImplementedException();

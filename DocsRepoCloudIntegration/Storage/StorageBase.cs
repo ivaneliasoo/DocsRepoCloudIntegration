@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace DocsRepoCloudIntegration
 {
-    internal abstract class StorageBase
+    public abstract class StorageBase
     {
         public string SystemBaseFolder { get; set; } = "ZadERP";
         public string TempFolder { get; set; } = "TEMP";

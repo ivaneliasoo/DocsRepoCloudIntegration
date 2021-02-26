@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace DocsRepoCloudIntegration
 {
-    class FileSystemDriver : StorageBase, IStorageDriver
+    public class FileSystemDriver : StorageBase, IStorageDriver
     {
-        private readonly ILogger<OneDriveStorageDriver> _logger;
+        private readonly ILogger<FileSystemDriver> _logger;
 
-        public FileSystemDriver(ILogger<OneDriveStorageDriver> logger, IOptionsMonitor<StorageOptions> options)
+        public FileSystemDriver(ILogger<FileSystemDriver> logger, IOptionsMonitor<StorageOptions> options)
             : base(options)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
