@@ -32,6 +32,12 @@ namespace DocsRepoCloudIntegration
             _graphServiceClient = new GraphServiceClient(_authProvider);
         }
 
+        private async Task<(IDriveItemRequestBuilder client, string driveId)> BuildDriveClient()
+        {
+            var driveId = await GetWorkingDriveId();
+            return (_graphServiceClient.Drives[driveId].Root, driveId);
+        }
+
         private async ValueTask<string> GetWorkingDriveId()
         {
             var result = await _graphServiceClient
@@ -43,28 +49,26 @@ namespace DocsRepoCloudIntegration
             return result.Id;
         }
 
-        private async ValueTask<IDriveItemRequestBuilder> GetRootFolder(string driveId)
+        // TODO: maybe here I can pass a base folder that's already known 
+        //       (for any reason) in order to reduce the excecution time
+        public async Task CreateFolderIfNotExists(string folderPath, string folderAsRoot = "")
         {
-            var result = _graphServiceClient
-                .Drives[driveId]
-                .Root
-                .ItemWithPath(SystemBaseFolder);
+            var clientBase = await BuildDriveClient();
+            var driveId = clientBase.driveId;
 
-            return result;
-        }
-
-        public async Task CreatFolderIfNotExists(string folderPath)
-        {
-            var driveId = await GetWorkingDriveId();
-            var currentFolder = _graphServiceClient.Drives[driveId].Root;
-            var foldersToCreate = $"{SystemBaseFolder}/{folderPath}".Split("/", StringSplitOptions.RemoveEmptyEntries);
+            var currentFolder = string.IsNullOrWhiteSpace(folderAsRoot) ? clientBase.client : clientBase.client.ItemWithPath(folderAsRoot);
+            folderPath = $"{SystemBaseFolder}/{folderPath}";
+            var foldersToCreate = folderPath.Split("/", StringSplitOptions.RemoveEmptyEntries);
             string path = "";
-            IDriveItemRequestBuilder builder = null;
+
+            var existentItem = await currentFolder.ItemWithPath(folderPath).Request().GetAsync();
+
+            if (existentItem != null) return;
+
             foreach (var folderName in foldersToCreate)
             {
                 path = string.Format("{0}{1}{2}", path, string.IsNullOrEmpty(path) ? "" : "/", folderName);
-                builder = _graphServiceClient.Drives[driveId].Root
-                    .ItemWithPath(path);
+                IDriveItemRequestBuilder builder = clientBase.client.ItemWithPath(path);
                 DriveItem existent;
                 try
                 {
@@ -88,7 +92,8 @@ namespace DocsRepoCloudIntegration
                                                     {"@microsoft.graph.conflictBehavior", "rename"}
                                                 }
                         });
-                        builder = currentFolder.ItemWithPath(path);
+                        builder = _graphServiceClient.Drives[driveId].Root
+                                                        .ItemWithPath(path);
                     }
                     catch (Exception ex)
                     {
@@ -103,68 +108,150 @@ namespace DocsRepoCloudIntegration
 
         public async Task<IEnumerable<string>> ListAsync(string path = "")
         {
-            var result = await _graphServiceClient.Users["{5bf33692-4f7d-4139-b592-c058661d91f6}"].Drive.Root.ItemWithPath($"{path}/Templates/DocumentosNuevaOferta").Children.Request().GetAsync();
-            return result.Select(di => $"{di.Name} - {di.FileSystemInfo.LastModifiedDateTime}");
+            path = $"{this.SystemBaseFolder}/{path}";
+            var result = await _graphServiceClient.Users[_options.CurrentValue.CloudDriveUserId].Drive.Root.ItemWithPath(path).Children.Request().GetAsync();
+            return result.Select(di => $"{di.Name} - {di.FileSystemInfo.CreatedDateTime}");
         }
 
-        public Task CopyFile(string source, string target, bool ovewrite = true)
+        public async Task CopyFile(string source, string target, bool ovewrite = true)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var fileName = Path.GetFileName(source);
+                var baseClient = await BuildDriveClient();
+                var findedTarget = await baseClient.client.ItemWithPath(string.Join("/", SystemBaseFolder, target)).Request().GetAsync();
+                var findedSource = await baseClient.client.ItemWithPath(string.Join("/", SystemBaseFolder, source)).Copy(fileName, new ItemReference { DriveId = baseClient.driveId, Id = findedTarget.Id }).Request().PostAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al copiar archivo");
+                throw;
+            }
         }
 
-        public Task DeleteFile(string filePath)
+        public async Task DeleteFile(string filePath)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var baseClient = await BuildDriveClient();
+                await baseClient.client.ItemWithPath(string.Join("/", SystemBaseFolder, filePath)).Request().DeleteAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al copiar archivo");
+                throw;
+            }
         }
 
-        public Task DeleteFolder(string path, bool recursive = true)
+        public async Task DeleteFolder(string path, bool recursive = true)
         {
-            throw new NotImplementedException();
+            await DeleteFile(path);
         }
 
-        public string GenerateFilePath(string path, string fileName, bool useUniqueString = false)
+        public async Task<string[]> GetFilesInFolder(string folder)
         {
-            throw new NotImplementedException();
+            var result = await ListAsync(folder);
+            if (result.Any())
+            {
+                return result.ToArray();
+            }
+            return Array.Empty<string>();
         }
 
-        public string[] GetFilesInFolder(string folder)
+        public async Task<MemoryStream> GetMemoryStreamFromFile(string fullPath)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var baseClient = await BuildDriveClient();
+                var file = await baseClient.client.ItemWithPath(string.Join("/", SystemBaseFolder, fullPath)).Content.Request().GetAsync();
+                return (MemoryStream)file;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al copiar archivo");
+                throw;
+            }
         }
 
-        public Task<MemoryStream> GetMemoryStreamFromFile(string fullPath)
+        public async Task<string> Save(byte[] fileContent, string path, string fileName, bool useUniqueString)
         {
-            throw new NotImplementedException();
-        }
-
-        public string Save(byte[] fileContent, string path, string fileName, bool useUniqueString)
-        {
-            throw new NotImplementedException();
+            return await SaveAsync(new MemoryStream(fileContent), path, fileName, useUniqueString);
         }
 
         public string Save(Stream fileStream, string path, string fileName, bool useUniqueString)
         {
-            throw new NotImplementedException();
+            //not that elegant but I'll avoid it for sure, so to use only the async one
+            return SaveAsync(fileStream, path, fileName, useUniqueString).GetAwaiter().GetResult();
         }
 
-        public string Save(string path, string fileName, bool useUniqueString, out string savedFileName)
+        public async Task<string> SaveAsync(Stream fileStream, string path, string fileName, bool useUniqueString)
         {
-            throw new NotImplementedException();
+            try
+            {
+                string filePath = GenerateFilePath(path, fileName, useUniqueString);
+
+                await CreateFolderIfNotExists(path);
+
+                string targetPath = string.Join("/", SystemBaseFolder, filePath);
+
+                long fileSize = (fileStream.Length * 1024) * 1024; // in MB
+
+                if (fileSize > SmallFileSize)
+                {
+                    await UploadResumableFile(fileStream,targetPath);
+                }
+                else
+                {
+                    await UploadFile(fileStream, targetPath);
+                }
+
+                return targetPath;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ocurrió un error al guardar el archivo");
+                throw;
+            }
         }
 
-        public Task<string> SaveAsync(Stream fileStream, string path, string fileName, bool useUniqueString)
+        public async Task<string> SaveOnTempFolder(byte[] fileContent, string fileName, bool useUniqueString)
         {
-            throw new NotImplementedException();
+            return await Save(fileContent, TempFolder, fileName, useUniqueString);
         }
 
-        public string SaveOnTempFolder(byte[] fileContent, string fileName, bool useUniqueString)
+        public async Task Move(string sourceFileName, string pathDest)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var fileName = Path.GetFileName(sourceFileName);
+                var baseClient = await BuildDriveClient();
+                var findedTarget = await baseClient.client.ItemWithPath(string.Join("/", SystemBaseFolder, pathDest)).Request().GetAsync();
+                await baseClient.client.ItemWithPath(string.Join("/", SystemBaseFolder, sourceFileName)).Request().UpdateAsync(
+                    new DriveItem
+                    {
+                        Name = fileName,
+                        ParentReference = new ItemReference { DriveId = baseClient.driveId, Id = findedTarget.Id }
+                    });
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "No se ha podido mover el archivo");
+                throw;
+            }
         }
 
-        public Task Move(string sourceFileName, string pathDest)
+        private async Task UploadFile(Stream fileStream, string targetPath)
         {
-            throw new NotImplementedException();
+            var baseClient = await BuildDriveClient();
+
+            await baseClient.client.ItemWithPath(targetPath)
+                            .Content.Request().PutAsync<DriveItem>(fileStream);
+        }
+
+        private async Task UploadResumableFile(Stream fileStream, string targetPath)
+        {
+            var baseClient = await BuildDriveClient();
         }
     }
 }

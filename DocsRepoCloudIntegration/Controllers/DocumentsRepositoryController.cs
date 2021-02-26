@@ -27,7 +27,7 @@ namespace DocsRepoCloudIntegration.Controllers
         [HttpGet]
         public async Task<IActionResult> GetDocuments()
         {
-            var result = await _storageDriver.ListAsync("ZadERP");
+            var result = await _storageDriver.ListAsync();
 
             if (result is null)
                 return NoContent();
@@ -38,10 +38,11 @@ namespace DocsRepoCloudIntegration.Controllers
         [HttpPost("oferta/{idOferta:int}")]
         public async Task<IActionResult> CreateOfertaFiles(int idOferta)
         {
-            string ofertaFolder = string.Format("{0}/{1}", Entities.Ofertas.ToString(), idOferta.ToString());
+            string ofertaFolder = string.Format("{0}/O20010200005/{1}", Entities.Ofertas.ToString(), idOferta.ToString());
             try
             {
-                await _storageDriver.CreatFolderIfNotExists(ofertaFolder);
+                await _storageDriver.CreateFolderIfNotExists(ofertaFolder);
+                await _storageDriver.CopyFile("Templates/DocumentosNuevaOferta/contrato proyecto_01.docx", ofertaFolder);
                 return Ok();
             }
             catch (Exception exIO)
@@ -51,21 +52,21 @@ namespace DocsRepoCloudIntegration.Controllers
             }
         }
 
-        //[HttpPost("oferta/{idPedido:int}")]
-        //public async Task<IActionResult> CreatePedidosFiles(int idPedido)
-        //{
-        //    string pedidoFolder = string.Format(_options.CurrentValue.PathTemplate, Entities.Pedidos.ToString(), idPedido.ToString());
-        //    try
-        //    {
-        //        await _storageDriver.CreatFolderIfNotExists(pedidoFolder);
-        //        return Ok();
-        //    }
-        //    catch (Exception exIO)
-        //    {
-        //        _logger.LogError(exIO, $"Error Creando Carpetas {pedidoFolder}");
-        //        throw;
-        //    }
-        //}
+        [HttpPost("pedido/{idPedido:int}")]
+        public async Task<IActionResult> CreatePedidosFiles(int idPedido)
+        {
+            string pedidoFolder = string.Format("{0}/O20010200005/{1}", Entities.Pedidos.ToString(), idPedido.ToString());
+            try
+            {
+                await _storageDriver.CreateFolderIfNotExists(pedidoFolder);
+                return Ok();
+            }
+            catch (Exception exIO)
+            {
+                _logger.LogError(exIO, $"Error Creando Carpetas {pedidoFolder}");
+                throw;
+            }
+        }
     }
 
     public enum Entities

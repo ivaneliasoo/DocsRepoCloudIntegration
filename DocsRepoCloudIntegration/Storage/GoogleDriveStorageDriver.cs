@@ -12,7 +12,7 @@ namespace DocsRepoCloudIntegration
             throw new NotImplementedException();
         }
 
-        public Task CreatFolderIfNotExists(string folderPath)
+        public Task CreateFolderIfNotExists(string folderPath, string folderAsRoot = "")
         {
             throw new NotImplementedException();
         }
@@ -27,12 +27,7 @@ namespace DocsRepoCloudIntegration
             throw new NotImplementedException();
         }
 
-        public string GenerateFilePath(string path, string fileName, bool useUniqueString = false)
-        {
-            throw new NotImplementedException();
-        }
-
-        public string[] GetFilesInFolder(string folder)
+        public Task<string[]> GetFilesInFolder(string folder)
         {
             throw new NotImplementedException();
         }
@@ -52,7 +47,7 @@ namespace DocsRepoCloudIntegration
             throw new NotImplementedException();
         }
 
-        public string Save(byte[] fileContent, string path, string fileName, bool useUniqueString)
+        public Task<string> Save(byte[] fileContent, string path, string fileName, bool useUniqueString)
         {
             throw new NotImplementedException();
         }
@@ -67,10 +62,9 @@ namespace DocsRepoCloudIntegration
             throw new NotImplementedException();
         }
 
-        public string SaveOnTempFolder(byte[] fileContent, string fileName, bool useUniqueString)
+        public Task<string> SaveOnTempFolder(byte[] fileContent, string fileName, bool useUniqueString)
         {
             throw new NotImplementedException();
         }
     }
-
 }

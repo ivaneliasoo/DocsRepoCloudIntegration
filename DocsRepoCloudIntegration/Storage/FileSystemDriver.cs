@@ -35,10 +35,10 @@ namespace DocsRepoCloudIntegration
 
             return Task.CompletedTask;
         }
-
-        public Task CreatFolderIfNotExists(string folderPath)
+        public Task CreateFolderIfNotExists(string folderPath, string folderAsRoot = "")
         {
-            if (!Directory.Exists(folderPath))
+            //TODO: controlar posibles bugs con '/' al finalizar las rutas
+            if (!Directory.Exists($"{folderAsRoot}/{folderPath}"))
                 Directory.CreateDirectory(folderPath);
 
             return Task.CompletedTask;
@@ -60,22 +60,11 @@ namespace DocsRepoCloudIntegration
             return Task.CompletedTask;
         }
 
-        public string GenerateFilePath(string path, string fileName, bool useUniqueString = false)
-        {
-            //Reemplazar con underscore los caranteres invalidos en el path
-            fileName = string.Join("_", fileName.Split(Path.GetInvalidFileNameChars()));
-
-            if (useUniqueString)
-                return Path.Combine(path, fileName.Insert(fileName.LastIndexOf('.'), DateTime.Now.Ticks.ToString()));
-            else
-                return Path.Combine(path, fileName);
-        }
-
-        public string[] GetFilesInFolder(string folder)
+        public Task<string[]> GetFilesInFolder(string folder)
         {
             try
             {
-                return Directory.GetFiles(folder);
+                return Task.FromResult(Directory.GetFiles(folder));
             }
             catch (Exception)
             {
@@ -102,9 +91,15 @@ namespace DocsRepoCloudIntegration
 
         }
 
-        public Task<IEnumerable<string>> ListAsync(string path = "")
+        public async Task<IEnumerable<string>> ListAsync(string path = "")
         {
-            throw new NotImplementedException();
+            var result = await GetFilesInFolder(path);
+            if(result!=null)
+            {
+                return result;
+            }
+
+            return Array.Empty<string>();
         }
 
         public Task Move(string sourceFileName, string pathDest)
@@ -130,21 +125,21 @@ namespace DocsRepoCloudIntegration
             }
         }
 
-        public string Save(byte[] fileContent, string path, string fileName, bool useUniqueString)
+        public Task<string> Save(byte[] fileContent, string path, string fileName, bool useUniqueString)
         {
             string filePath = GenerateFilePath(path, fileName, useUniqueString);
             using (var stream = new FileStream(filePath, FileMode.Create))
             {
                 stream.Write(fileContent, 0, fileContent.Length);
             }
-            return filePath;
+            return Task.FromResult(filePath);
         }
 
         public string Save(Stream fileStream, string path, string fileName, bool useUniqueString)
         {
             string filePath = GenerateFilePath(path, fileName, useUniqueString);
 
-            CreatFolderIfNotExists(path);
+            CreateFolderIfNotExists(path);
 
             using (var stream = File.Create(filePath))
             {
@@ -156,7 +151,7 @@ namespace DocsRepoCloudIntegration
         public async Task<string> SaveAsync(Stream fileStream, string path, string fileName, bool useUniqueString)
         {
             string filePath = GenerateFilePath(path, fileName, useUniqueString);
-            await CreatFolderIfNotExists(path);
+            await CreateFolderIfNotExists(path);
 
             using (var stream = File.Create(filePath))
             {
@@ -165,9 +160,9 @@ namespace DocsRepoCloudIntegration
             return filePath;
         }
 
-        public string SaveOnTempFolder(byte[] fileContent, string fileName, bool useUniqueString)
+        public async Task<string> SaveOnTempFolder(byte[] fileContent, string fileName, bool useUniqueString)
         {
-            return Save(fileContent, TempFolder, fileName, useUniqueString);
+            return await Save(fileContent, TempFolder, fileName, useUniqueString);
         }
     }
 }
